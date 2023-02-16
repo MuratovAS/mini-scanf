@@ -12,48 +12,9 @@
 #endif
 
 //conf
+#define C_SCANF
 // %[..]
 #define LENSCANS 10
-
-// test
-#define TEXT "9 5 2 asd-   en d$ 3"
-
-#define scanF "%d %*d %u %c %s %[^$] %d"
-#define scanA &d, &u, &c, s, ss, &test
-
-#define printF "D=%d U=%d C=%c S=%s SS=%s  test=%d  R=%d\n\r"
-#define printA d, u, c, s, ss, test, ret
-
-int	c_isdigit(int c);
-
-// implementation of non-standard functions
-long atoie(char const* c, char** p)
-{
-	if (c == NULL)
-		return 0;
-
-	// Account for a leading positive or negative sign.
-	int sign = 1;
-	while (!c_isdigit(*c))
-	{
-		if (*c == '\0')
-			return 0;
-		if (*c == '+' || *c == '-')
-			if (*c == '-')
-				sign = -1;
-		c++;
-	}
-
-	// Read in each successive characters until a non-digit character is reached.
-	long value = 0;
-	for (; c_isdigit(*c); ++c)
-	{
-		value *= 10;
-		value += (int)(*c - '0');
-	}
-	*p = (char*)c;
-	return value * sign;
-}
 
 // implementation of basic dependencies
 int c_isspace(const int c)
@@ -80,10 +41,13 @@ int	c_isdigit(int c)
 		return (0);
 }
 
+int c_getchar()
+{
+    return getchar();
+}
+
 int c_sscanf(const char* buff, char* format, ...)
 {
-	char* out_loc;
-
 	int count = 0;
 
 	int PointBuf = 0;
@@ -133,13 +97,28 @@ int c_sscanf(const char* buff, char* format, ...)
 					break;
 				case 'u': // clone %d (?)
 				case 'd':
-					int d = atoie(&buff[PointBuf], &out_loc);
+					int sign = 1;
+					while (!c_isdigit(buff[PointBuf]))
+					{
+						if (buff[PointBuf] == '+' || buff[PointBuf] == '-')
+							if (buff[PointBuf] == '-')
+								sign = -1;
+						PointBuf++;
+					}
+					long value = 0;
+					while(c_isdigit(buff[PointBuf]))
+					{
+						value *= 10;
+						value += (int)(buff[PointBuf] - '0');
+						PointBuf++;
+					}
+
 					if (save)
-						*(int*)va_arg(ap, int*) = d;
-					PointBuf += out_loc - &buff[PointBuf];
+						*(int*)va_arg(ap, int*) = value * sign;
 					count++;
 					break;
-				/*case 'o':
+				/*case 'o': // c_sscanf ONLY
+						char* out_loc;
 						int o = strtol(&buff[PointBuf], &out_loc, 8);
 						if(save)
 								*(int*)va_arg(ap, int*) = o;
@@ -153,7 +132,7 @@ int c_sscanf(const char* buff, char* format, ...)
 					while (c_isspace(buff[PointBuf])) // ignor isspace (std)
 						PointBuf++;
 
-					while (1)
+					while (true)
 					{
 						bool con = false;
 						if (stopN != 0)
@@ -182,7 +161,8 @@ int c_sscanf(const char* buff, char* format, ...)
 					}
 					count++;
 					break;
-					/*case 'x':
+					/*case 'x': // c_sscanf ONLY
+							char* out_loc;
 							int x = strtol(&buff[PointBuf], &out_loc, 16);
 							if(save)
 									*(int*)va_arg(ap, int*) = x;
@@ -200,6 +180,14 @@ int c_sscanf(const char* buff, char* format, ...)
 }
 
 // test
+#define TEXT "-9 5 2 asd-   en d$ 3"
+
+#define SCANF "%d %*d %u %c %s %[^$] %d"
+#define SCANA &d, &u, &c, s, ss, &test
+
+#define PRINTF "D=%d U=%d C=%c S=%s SS=%s  test=%d  R=%d\n\r"
+#define PRINTA d, u, c, s, ss, test, ret
+
 int main(int argc, char* argv[])
 {
 	char buff[100] = TEXT;
@@ -213,9 +201,11 @@ int main(int argc, char* argv[])
 
 	int ret;
 
-	printf("TEST(sscanf):\n\r%s\n\r", buff);
-	ret = c_sscanf(buff, scanF, scanA);
-	printf(printF, printA);
-	ret = sscanf(buff, scanF, scanA);
-	printf(printF, printA);
+	printf("TEST:\n\rref in: %s\n\r", buff);
+	printf("imp:    ");
+	ret = c_sscanf(buff, SCANF, SCANA);
+	printf(PRINTF, PRINTA);
+	printf("ref:    ");
+	ret = sscanf(buff, SCANF, SCANA);
+	printf(PRINTF, PRINTA);
 }

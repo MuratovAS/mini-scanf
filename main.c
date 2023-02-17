@@ -69,6 +69,17 @@ int c_sscanf(const char* buff, char* format, ...)
 				PointFt++;
 			}
 
+			// for %1234567890
+			unsigned len = 0;
+			bool lenEn = false;
+			while (c_isdigit(format[PointFt]))
+			{
+				lenEn = true;
+				len *= 10;
+				len += (format[PointFt] - '0');
+				PointFt++;
+			}
+
 			// for %[]
 			char stop[LENSCANS];
 			unsigned stopN = 0;
@@ -87,53 +98,48 @@ int c_sscanf(const char* buff, char* format, ...)
 
 			switch (format[PointFt])
 			{
-				case 'c': // ignore isspace (std)
-					while (c_isspace(buff[PointBuf]))
-						PointBuf++;
+				case 'c':
+					while (c_isspace(buff[PointBuf])) // ignore isspace (std)
+						PointBuf++; //
 					if (save)
 						*(char*)va_arg(ap, char*) = buff[PointBuf];
 					PointBuf++;
 					count++;
 					break;
-				case 'u': // clone %d (?)
+				case 'u':
 				case 'd':
 					int sign = 1;
 					while (!c_isdigit(buff[PointBuf]))
 					{
 						if (buff[PointBuf] == '+' || buff[PointBuf] == '-')
 							if (buff[PointBuf] == '-')
-								sign = -1;
+								//if(format[PointFt] != 'u') // ignore sign (no std)
+									sign = -1;
 						PointBuf++;
 					}
 					long value = 0;
-					while(c_isdigit(buff[PointBuf]))
+					while(c_isdigit(buff[PointBuf]) && (lenEn != true || len > 0))
 					{
 						value *= 10;
 						value += (int)(buff[PointBuf] - '0');
 						PointBuf++;
+						len--;
 					}
 
 					if (save)
 						*(int*)va_arg(ap, int*) = value * sign;
 					count++;
 					break;
-				/*case 'o': // c_sscanf ONLY
-						char* out_loc;
-						int o = strtol(&buff[PointBuf], &out_loc, 8);
-						if(save)
-								*(int*)va_arg(ap, int*) = o;
-						PointBuf += out_loc - &buff[PointBuf];
-						count++;
-						break;*/
 				case ']':
 				case 's':
 					char* t = va_arg(ap, char*);
 
 					while (c_isspace(buff[PointBuf])) // ignor isspace (std)
-						PointBuf++;
+						PointBuf++; //
 
 					while (true)
 					{
+						//
 						bool con = false;
 						if (stopN != 0)
 						{
@@ -149,30 +155,24 @@ int c_sscanf(const char* buff, char* format, ...)
 							if (con == true)
 								break;
 						}
-						if (!c_isspace(buff[PointBuf]) || (!con && stopN != 0))
+
+						if (!c_isspace(buff[PointBuf]) || (!con && stopN != 0) && (lenEn != true || len > 0))
 						{
 							if (save)
 								*t = buff[PointBuf];
 							PointBuf++;
 							t++;
+							len--;
 						}
 						else
 							break;
 					}
 					count++;
 					break;
-					/*case 'x': // c_sscanf ONLY
-							char* out_loc;
-							int x = strtol(&buff[PointBuf], &out_loc, 16);
-							if(save)
-									*(int*)va_arg(ap, int*) = x;
-							PointBuf += out_loc - &buff[PointBuf];
-							count++;
-							break;*/
 			}
 		}
 		// else  // drop char in buff (no std)
-		// PointBuf++;
+		// PointBuf++; //
 		PointFt++;
 	}
 	va_end(ap);
@@ -180,9 +180,9 @@ int c_sscanf(const char* buff, char* format, ...)
 }
 
 // test
-#define TEXT "-9 5 2 asd-   en d$ 3"
+#define TEXT "-9 5 20 asd-   en d$ 3"
 
-#define SCANF "%d %*d %u %c %s %[^$] %d"
+#define SCANF "%d %*d %2u %c %s %[^$] %d"
 #define SCANA &d, &u, &c, s, ss, &test
 
 #define PRINTF "D=%d U=%d C=%c S=%s SS=%s  test=%d  R=%d\n\r"

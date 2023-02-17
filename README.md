@@ -31,6 +31,7 @@ Mechanisms are also implemented:
 %[@..]  - read selected characters
 %[^@..] - read until a character is encountered
 ```
+NOTE: The return value is different from glibc! My implementation counts the number of parameters processed.
 
 It's completely standalone without any external dependencies.
 
@@ -38,6 +39,14 @@ It's completely standalone without any external dependencies.
 ```text
 C_SSCANF // Comment out `#define` in order to use code like scanf
 LENSCANS // The number of characters processed in the `%[]` construct
+```
+
+## Example
+```text
+// "%d %*d %2u %c %s %[^$] %d"
+in: -9 5 20 asd-   en d$ 3
+imp:  D=-9 U=20 C=a S=sd- SS=en d  test=3  R=7
+ref:  D=-9 U=20 C=a S=sd- SS=en d  test=3  R=5
 ```
 
 ## Credits

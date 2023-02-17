@@ -2,8 +2,6 @@
  *  mini-scanf.c - Minimal scanf() implementation for embedded projects. 
  * Copyright (c) 2023 Aleksej Muratov
  */
-
-#include <stdio.h> // TEST only
 #include <stdarg.h>
 #include <stdbool.h>
 
@@ -11,12 +9,15 @@
 #define NULL 0
 #endif
 
-//conf
-#define C_SCANF
+// conf
+// sscanf / scanf
+#define C_SSCANF
 // %[..]
 #define LENSCANS 10
 
 // implementation of basic dependencies
+int c_getch();
+
 int c_isspace(const int c)
 {
 	switch (c)
@@ -41,16 +42,28 @@ int	c_isdigit(int c)
 		return (0);
 }
 
-int c_getchar()
-{
-    return getchar();
-}
+#ifdef C_SSCANF
+	#define NEXTCHAR (PointBuf++)
+	#define CURCHAR (buff[PointBuf])
+#else
+	#define NEXTCHAR (charBuf=c_getch())
+	#define CURCHAR (charBuf)
+#endif
 
+#ifdef C_SSCANF
 int c_sscanf(const char* buff, char* format, ...)
+#else
+int c_scanf(char* format, ...)
+#endif
 {
 	int count = 0;
 
-	int PointBuf = 0;
+	#ifdef C_SSCANF
+		int PointBuf = 0;
+	#else
+		char charBuf = c_getch();
+	#endif
+
 	int PointFt = 0;
 
 	va_list ap;
@@ -60,7 +73,6 @@ int c_sscanf(const char* buff, char* format, ...)
 		if (format[PointFt] == '%')
 		{
 			PointFt++;
-
 			// for %*
 			bool save = true;
 			if (format[PointFt] == '*')
@@ -68,7 +80,6 @@ int c_sscanf(const char* buff, char* format, ...)
 				save = false;
 				PointFt++;
 			}
-
 			// for %1234567890
 			unsigned len = 0;
 			bool lenEn = false;
@@ -79,7 +90,6 @@ int c_sscanf(const char* buff, char* format, ...)
 				len += (format[PointFt] - '0');
 				PointFt++;
 			}
-
 			// for %[]
 			char stop[LENSCANS];
 			unsigned stopN = 0;
@@ -95,34 +105,34 @@ int c_sscanf(const char* buff, char* format, ...)
 					PointFt++;
 				}
 			}
-
+			// %?
 			switch (format[PointFt])
 			{
 				case 'c':
-					while (c_isspace(buff[PointBuf])) // ignore isspace (std)
-						PointBuf++; //
+					while (c_isspace(CURCHAR)) // ignore isspace (std)
+						NEXTCHAR; //
 					if (save)
-						*(char*)va_arg(ap, char*) = buff[PointBuf];
-					PointBuf++;
+						*(char*)va_arg(ap, char*) = CURCHAR;
+					NEXTCHAR;
 					count++;
 					break;
 				case 'u':
 				case 'd':
 					int sign = 1;
-					while (!c_isdigit(buff[PointBuf]))
+					while (!c_isdigit(CURCHAR))
 					{
-						if (buff[PointBuf] == '+' || buff[PointBuf] == '-')
-							if (buff[PointBuf] == '-')
+						if (CURCHAR == '+' || CURCHAR == '-')
+							if (CURCHAR == '-')
 								//if(format[PointFt] != 'u') // ignore sign (no std)
 									sign = -1;
-						PointBuf++;
+						NEXTCHAR;
 					}
 					long value = 0;
-					while(c_isdigit(buff[PointBuf]) && (lenEn != true || len > 0))
+					while(c_isdigit(CURCHAR) && (lenEn != true || len > 0))
 					{
 						value *= 10;
-						value += (int)(buff[PointBuf] - '0');
-						PointBuf++;
+						value += (int)(CURCHAR - '0');
+						NEXTCHAR;
 						len--;
 					}
 
@@ -134,8 +144,8 @@ int c_sscanf(const char* buff, char* format, ...)
 				case 's':
 					char* t = va_arg(ap, char*);
 
-					while (c_isspace(buff[PointBuf])) // ignor isspace (std)
-						PointBuf++; //
+					while (c_isspace(CURCHAR)) // ignor isspace (std)
+						NEXTCHAR; //
 
 					while (true)
 					{
@@ -146,7 +156,7 @@ int c_sscanf(const char* buff, char* format, ...)
 							bool invert = (stop[0] == '^');
 							con = !invert;
 							for (unsigned i = (invert ? 1 : 0); i < stopN; i++)
-								if (stop[i] == buff[PointBuf])
+								if (stop[i] == CURCHAR)
 								{
 									con = invert;
 									break;
@@ -156,11 +166,11 @@ int c_sscanf(const char* buff, char* format, ...)
 								break;
 						}
 
-						if (!c_isspace(buff[PointBuf]) || (!con && stopN != 0) && (lenEn != true || len > 0))
+						if (!c_isspace(CURCHAR) || (!con && stopN != 0) && (lenEn != true || len > 0))
 						{
 							if (save)
-								*t = buff[PointBuf];
-							PointBuf++;
+								*t = CURCHAR;
+							NEXTCHAR;
 							t++;
 							len--;
 						}
@@ -171,15 +181,40 @@ int c_sscanf(const char* buff, char* format, ...)
 					break;
 			}
 		}
-		// else  // drop char in buff (no std)
-		// PointBuf++; //
+		//else  // drop char in buff (no std)
+		//	NEXTCHAR; //
 		PointFt++;
 	}
 	va_end(ap);
 	return count;
 }
 
+
+
 // test
+#include <stdio.h> // TEST only
+#include <unistd.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <errno.h>
+int c_getch()
+{
+	struct termios oldt, newt;
+	int ch;
+	tcgetattr( STDIN_FILENO, &oldt );
+	newt = oldt;
+	newt.c_lflag &= ~ICANON;
+	//if(echo != 0)
+	//newt.c_lflag &=  ECHO;
+	//else
+	newt.c_lflag &= ~ECHO;
+
+	tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+	ch = getchar();
+	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+	return ch;
+}
+
 #define TEXT "-9 5 20 asd-   en d$ 3"
 
 #define SCANF "%d %*d %2u %c %s %[^$] %d"
@@ -201,11 +236,23 @@ int main(int argc, char* argv[])
 
 	int ret;
 
-	printf("TEST:\n\rref in: %s\n\r", buff);
+	#ifdef C_SSCANF
+		printf("TEST:\n\rref in: %s\n\r", buff);
+	#endif
+
 	printf("imp:    ");
-	ret = c_sscanf(buff, SCANF, SCANA);
+	#ifdef C_SSCANF
+		ret = c_sscanf(buff, SCANF, SCANA);
+	#else
+		ret = c_scanf(SCANF, SCANA);
+	#endif
 	printf(PRINTF, PRINTA);
+
 	printf("ref:    ");
-	ret = sscanf(buff, SCANF, SCANA);
+	#ifdef C_SSCANF
+		ret = sscanf(buff, SCANF, SCANA);
+	#else
+		ret = scanf(SCANF, SCANA);
+	#endif
 	printf(PRINTF, PRINTA);
 }

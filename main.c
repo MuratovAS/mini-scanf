@@ -1,5 +1,5 @@
 /*
- *  mini-scanf.c - Minimal scanf() implementation for embedded projects. 
+ * mini-scanf.c - Minimal scanf() implementation for embedded projects. 
  * Copyright (c) 2023 Aleksej Muratov
  */
 #include <stdarg.h>
@@ -45,15 +45,11 @@ int	c_isdigit(int c)
 #ifdef C_SSCANF
 	#define NEXTCHAR (PointBuf++)
 	#define CURCHAR (buff[PointBuf])
+	int c_sscanf(const char* buff, char* format, ...)
 #else
 	#define NEXTCHAR (charBuf=c_getch())
 	#define CURCHAR (charBuf)
-#endif
-
-#ifdef C_SSCANF
-int c_sscanf(const char* buff, char* format, ...)
-#else
-int c_scanf(char* format, ...)
+	int c_scanf(char* format, ...)
 #endif
 {
 	int count = 0;

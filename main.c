@@ -233,10 +233,10 @@ int main(int argc, char* argv[])
 	int ret;
 
 	#ifdef C_SSCANF
-		printf("TEST:\n\rref in: %s\n\r", buff);
+		printf("in: %s\n\r", buff);
 	#endif
 
-	printf("imp:    ");
+	printf("imp:  ");
 	#ifdef C_SSCANF
 		ret = c_sscanf(buff, SCANF, SCANA);
 	#else
@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
 	#endif
 	printf(PRINTF, PRINTA);
 
-	printf("ref:    ");
+	printf("ref:  ");
 	#ifdef C_SSCANF
 		ret = sscanf(buff, SCANF, SCANA);
 	#else

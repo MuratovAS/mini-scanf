@@ -15,9 +15,12 @@
 // %[..]
 #define LENSCANS 10
 
-// implementation of basic dependencies
-int c_getch();
+// header
+char c_getch();
+bool c_getbackch(char b);
 
+// implementation of basic dependencies
+// std
 int c_isspace(const int c)
 {
 	switch (c)
@@ -34,6 +37,7 @@ int c_isspace(const int c)
 	}
 }
 
+// std
 int	c_isdigit(int c)
 {
 	if (c >= '0' && c <= '9')
@@ -42,6 +46,7 @@ int	c_isdigit(int c)
 		return (0);
 }
 
+// parodies the standard
 #ifdef C_SSCANF
 	#define NEXTCHAR (PointBuf++)
 	#define CURCHAR (buff[PointBuf])
@@ -110,7 +115,8 @@ int	c_isdigit(int c)
 					if (save)
 						*(char*)va_arg(ap, char*) = CURCHAR;
 					NEXTCHAR;
-					count++;
+					//if (save) // ignore %* (std)
+						count++;
 					break;
 				case 'u':
 				case 'd':
@@ -134,7 +140,8 @@ int	c_isdigit(int c)
 
 					if (save)
 						*(int*)va_arg(ap, int*) = value * sign;
-					count++;
+					//if (save) // ignore %* (std)
+						count++;
 					break;
 				case ']':
 				case 's':
@@ -145,7 +152,6 @@ int	c_isdigit(int c)
 
 					while (true)
 					{
-						//
 						bool con = false;
 						if (stopN != 0)
 						{
@@ -173,9 +179,22 @@ int	c_isdigit(int c)
 						else
 							break;
 					}
-					count++;
+					// add \0
+					{
+						if (save)
+							*t = '\0';
+						t++;
+					}
+					//if (save) // ignore %* (std)
+						count++;
 					break;
 			}
+			#ifndef C_SSCANF
+			if(format[PointFt] != 'c' 
+			&& format[PointFt] != 'u'
+			&& format[PointFt] != 'd')
+				c_getbackch(CURCHAR);
+			#endif
 		}
 		//else  // drop char in buff (no std)
 		//	NEXTCHAR; //
@@ -185,15 +204,40 @@ int	c_isdigit(int c)
 	return count;
 }
 
+int getch(); // header
 
+// custom
+char backch = 0;
+char c_getch()
+{
+	if(backch == 0)
+		return (char)getch();
+	else
+	{	
+		char tmp = backch;
+		backch = 0;
+		return tmp;
+	}
+}
 
-// test
+// new
+bool c_getbackch(char b)
+{
+	char tmp = backch;
+	backch = b;
+	if (tmp != 0)
+		return 1;
+	else 
+		return 0;
+}
+
+// test only
 #include <stdio.h> // TEST only
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <errno.h>
-int c_getch()
+int getch()
 {
 	struct termios oldt, newt;
 	int ch;
@@ -211,13 +255,13 @@ int c_getch()
 	return ch;
 }
 
-#define TEXT "-9 5 20 asd-   en d$ 3"
+#define TEXT "-9 5 20 asd-   en d$"
 
-#define SCANF "%d %*d %2u %c %s %[^$] %d"
-#define SCANA &d, &u, &c, s, ss, &test
+#define SCANF "%d %*d %2u %c %s %[^$]"
+#define SCANA &d, &u, &c, s, ss
 
-#define PRINTF "D=%d U=%d C=%c S=%s SS=%s  test=%d  R=%d\n\r"
-#define PRINTA d, u, c, s, ss, test, ret
+#define PRINTF "D=%d U=%d C=%c S=%s SS=%s  R=%d\n\r"
+#define PRINTA d, u, c, s, ss, ret
 
 int main(int argc, char* argv[])
 {
@@ -228,9 +272,10 @@ int main(int argc, char* argv[])
 	char c;
 	int d;
 	unsigned u;
-	int test;
 
 	int ret;
+	char buf;
+
 
 	#ifdef C_SSCANF
 		printf("in: %s\n\r", buff);
@@ -241,14 +286,22 @@ int main(int argc, char* argv[])
 		ret = c_sscanf(buff, SCANF, SCANA);
 	#else
 		ret = c_scanf(SCANF, SCANA);
+		buf=c_getch();
 	#endif
 	printf(PRINTF, PRINTA);
+	#ifndef C_SSCANF
+	printf(" next=d%d(%c)\n\r", buf,buf);
+	#endif
 
 	printf("ref:  ");
 	#ifdef C_SSCANF
 		ret = sscanf(buff, SCANF, SCANA);
 	#else
 		ret = scanf(SCANF, SCANA);
+		buf=c_getch();
 	#endif
-	printf(PRINTF, PRINTA);
+	printf(PRINTF, PRINTA);	
+	#ifndef C_SSCANF
+	printf(" next=d%d(%c)\n\r", buf,buf);
+	#endif
 }

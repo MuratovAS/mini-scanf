@@ -28,17 +28,36 @@ Mechanisms are also implemented:
 
 %12..0? - max field width modifier
 %*?     - input suppression
-%[@..]  - read selected characters
+%[@..]  - read selected characters (ranges are not supported)
 %[^@..] - read until a character is encountered
 ```
-NOTE: The return value is different from glibc! My implementation counts the number of parameters processed.
 
-It's completely standalone without any external dependencies.
+> NOTE: The return value is different from glibc! My implementation counts the number of parameters processed.
+
+> NOTE: The standard implementation of `scanf` is stream-based and has `fifo`. This is a very demanding mechanism. The buffer has been simplified to be able to return a single character. This allows you to emit NOT reading the delimiter character. Works a little differently.
+
+It's completely standalone without any external dependencies. This implementation does not use memory allocation.
 
 ## Configuration:
-```text
-C_SSCANF // Comment out `#define` in order to use code like scanf
+```c
+C_SSCANF // Comment out `#define` in order to use code like `scanf`
 LENSCANS // The number of characters processed in the `%[]` construct
+```
+> NOTE: Don't make `LENSCANS` too big. This affects performance.
+
+## Usage
+
+Count one character (not expecting a delimiter). Returns a character directly. Redefine this function to read from UART.
+```c
+int getch()
+```
+
+The function of reading and returning the sibyl to the emitted stream. `c_getch` returns a character from the buffer, or a result `getch()`. 
+
+The function `c_getbackch` allows you to write to the buffer. Returns `false` if there is nothing in the buffer, or `true` if there is no value in the buffer.
+```c
+char c_getch()
+bool c_getbackch(char b)
 ```
 
 ## Example

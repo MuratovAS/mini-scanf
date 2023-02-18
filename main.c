@@ -145,7 +145,7 @@ int	c_isdigit(int c)
 					break;
 				case ']':
 				case 's':
-					char* t = va_arg(ap, char*);
+					char* t = save ? va_arg(ap, char*) : NULL;
 
 					while (c_isspace(CURCHAR)) // ignor isspace (std)
 						NEXTCHAR; //

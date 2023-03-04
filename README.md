@@ -52,7 +52,7 @@ Count one character (not expecting a delimiter). Returns a character directly. R
 int getch()
 ```
 
-The function of reading and returning the sibyl to the emitted stream. `c_getch` returns a character from the buffer, or a result `getch()`. 
+The function of reading and returning sibyl to the emitted stream. `c_getch` returns a character from the buffer, or a result `getch()`. 
 
 The function `c_getbackch` allows you to write to the buffer. Returns `false` if there is nothing in the buffer, or `true` if there is no value in the buffer.
 ```c
@@ -68,6 +68,10 @@ imp:  D=-9 U=20 C=a S=sd- SS=en d  test=3  R=7
 ref:  D=-9 U=20 C=a S=sd- SS=en d  test=3  R=5
 ```
 
+test:
+```text
+clear && gcc *.c -I ./ && ./a.out
+```
 ## Credits
 
 Project inspired by the work of [mini-printf](https://github.com/mludvig/mini-printf)
